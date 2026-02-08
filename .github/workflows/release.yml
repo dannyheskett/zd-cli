@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build binaries
+        run: |
+          # Linux AMD64
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o zd-linux-amd64 ./cmd/zd
+
+          # Linux ARM64
+          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o zd-linux-arm64 ./cmd/zd
+
+          # macOS AMD64
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o zd-darwin-amd64 ./cmd/zd
+
+          # macOS ARM64 (Apple Silicon)
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o zd-darwin-arm64 ./cmd/zd
+
+          # Windows AMD64
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o zd-windows-amd64.exe ./cmd/zd
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            zd-linux-amd64
+            zd-linux-arm64
+            zd-darwin-amd64
+            zd-darwin-arm64
+            zd-windows-amd64.exe
+          body: |
+            ## Zendesk CLI Release ${{ github.ref_name }}
+
+            Download the appropriate binary for your platform:
+
+            - **Linux (AMD64)**: `zd-linux-amd64`
+            - **Linux (ARM64)**: `zd-linux-arm64`
+            - **macOS (Intel)**: `zd-darwin-amd64`
+            - **macOS (Apple Silicon)**: `zd-darwin-arm64`
+            - **Windows (AMD64)**: `zd-windows-amd64.exe`
+
+            ### Installation
+
+            ```bash
+            # Linux/macOS
+            chmod +x zd-*
+            sudo mv zd-* /usr/local/bin/zd
+
+            # Verify
+            zd --version
+            ```
+
+            See the [README](https://github.com/${{ github.repository }}/blob/main/README.md) for usage instructions.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
